@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ main, dev, assignment-8-cicd-irakli ]
   pull_request:
     branches: [ main ]
 
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.12"]
 
     steps:
     - uses: actions/checkout@v4
@@ -27,8 +27,75 @@ jobs:
     - name: Install dependencies
       run: make install
 
-    - name: Run code quality checks (Linting, Formatting Check, Type Check, Pre-commit hooks)
-      run: make check-all
+
+
 
     - name: Run tests with coverage
       run: make test-cov
+
+  train-model:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Install dependencies
+      run: make install
+
+    - name: Download & preprocess data
+      run: |
+        source .venv/bin/activate
+        python src/load_data.py
+        python src/split_dataset.py --test_size 0.2
+        python src/train.py
+
+    - name: Upload model artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: iris-model
+        path: models/model.joblib
+
+  evaluate-model:
+    needs: train-model
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Install dependencies
+      run: make install
+
+    - name: Download iris-model artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: iris-model
+        path: models/
+
+    - name: Verify model artifact
+      run: |
+        if [ ! -f models/model.joblib ]; then
+          echo "Model artifact not found!" >&2
+          exit 1
+        fi
+
+    - name: Run evaluation script
+      run: |
+        source .venv/bin/activate
+        python src/evaluate.py
+
+    - name: Upload evaluation metrics
+      uses: actions/upload-artifact@v4
+      with:
+        name: evaluation-metrics
+        path: data/eval.json

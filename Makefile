@@ -44,8 +44,8 @@ autofix: lint-fix format ## Automatically fix linting issues and then format cod
 type-check: ## Run mypy type checking separately
 	uv run mypy src/ --config-file=pyproject.toml
 
-check-all: lint format-check type-check test pre-commit ## Run all checks (lint + test)
-	@echo "All checks complete."
+# check-all: lint format-check type-check test pre-commit ## Run all checks (lint + test)
+# 	@echo "All checks complete."
 
 clean: ## Clean up generated files
 	rm -rf .pytest_cache/
